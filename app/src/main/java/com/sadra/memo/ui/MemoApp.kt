@@ -23,10 +23,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.sadra.memo.ui.notes.NoteEditScreen
+import com.sadra.memo.ui.notes.NotesScreen
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
 
@@ -43,15 +47,18 @@ fun MemoApp() {
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
+    val inEditor = currentRoute?.startsWith("note_edit") == true
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = { /* ثبت سریع: مرحله بعد */ }) {
-                Icon(Icons.Filled.Add, contentDescription = "ثبت سریع")
+            if (!inEditor) {
+                FloatingActionButton(onClick = { navController.navigate("note_edit/0") }) {
+                    Icon(Icons.Filled.Add, contentDescription = "ثبت سریع")
+                }
             }
         },
         bottomBar = {
-            NavigationBar {
+            if (!inEditor) NavigationBar {
                 tabs.forEach { tab ->
                     NavigationBarItem(
                         selected = currentRoute == tab.route,
@@ -74,7 +81,19 @@ fun MemoApp() {
             startDestination = "home",
             modifier = Modifier.padding(padding)
         ) {
-            tabs.forEach { tab ->
+            composable("notes") {
+                NotesScreen(onOpen = { id -> navController.navigate("note_edit/$id") })
+            }
+            composable(
+                route = "note_edit/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.LongType })
+            ) { entry ->
+                NoteEditScreen(
+                    noteId = entry.arguments?.getLong("id") ?: 0L,
+                    onClose = { navController.popBackStack() }
+                )
+            }
+            tabs.filter { it.route != "notes" }.forEach { tab ->
                 composable(tab.route) { PlaceholderScreen(tab.label) }
             }
         }
