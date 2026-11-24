@@ -12,6 +12,9 @@ interface TaskDao {
     @Query("SELECT * FROM tasks ORDER BY isDone ASC, dueAt IS NULL, dueAt ASC, createdAt DESC")
     fun observeAll(): Flow<List<TaskEntity>>
 
+    @Query("SELECT * FROM tasks")
+    suspend fun getAll(): List<TaskEntity>
+
     @Query("SELECT * FROM tasks WHERE id = :id")
     suspend fun getById(id: Long): TaskEntity?
 
@@ -23,4 +26,7 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks WHERE isDone = 0 AND dueAt IS NOT NULL AND dueAt > :now")
     suspend fun upcomingWithDueDate(now: Long): List<TaskEntity>
+
+    @Query("DELETE FROM tasks")
+    suspend fun clearAll()
 }

@@ -15,6 +15,9 @@ class NoteRepositoryImpl(private val dao: NoteDao) : NoteRepository {
     override fun observeTrash(): Flow<List<Note>> =
         dao.observeTrash().map { list -> list.map { it.toDomain() } }
 
+    override fun observeArchived(): Flow<List<Note>> =
+        dao.observeArchived().map { list -> list.map { it.toDomain() } }
+
     override suspend fun getNote(id: Long): Note? = dao.getById(id)?.toDomain()
 
     override suspend fun save(note: Note): Long = dao.upsert(note.toEntity())
@@ -22,6 +25,9 @@ class NoteRepositoryImpl(private val dao: NoteDao) : NoteRepository {
     override suspend fun moveToTrash(id: Long) = dao.softDelete(id, System.currentTimeMillis())
 
     override suspend fun restore(id: Long) = dao.restore(id, System.currentTimeMillis())
+
+    override suspend fun setArchived(id: Long, archived: Boolean) =
+        dao.setArchived(id, archived, System.currentTimeMillis())
 
     override suspend fun deletePermanently(id: Long) = dao.deleteById(id)
 

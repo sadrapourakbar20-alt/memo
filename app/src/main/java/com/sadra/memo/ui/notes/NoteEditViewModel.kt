@@ -13,6 +13,7 @@ data class EditState(
     val content: String = "",
     val category: String = "",
     val pinned: Boolean = false,
+    val archived: Boolean = false,
     val loaded: Boolean = false
 )
 
@@ -32,7 +33,7 @@ class NoteEditViewModel(
                 val note = repository.getNote(noteId)
                 original = note
                 _state.value = if (note != null) {
-                    EditState(note.title, note.content, note.category, note.isPinned, loaded = true)
+                    EditState(note.title, note.content, note.category, note.isPinned, note.isArchived, loaded = true)
                 } else {
                     EditState(loaded = true)
                 }
@@ -47,7 +48,11 @@ class NoteEditViewModel(
     fun onCategory(value: String) { _state.value = _state.value.copy(category = value) }
     fun onPinned(value: Boolean) { _state.value = _state.value.copy(pinned = value) }
 
-    fun saveAndClose(onDone: () -> Unit) {
+    fun saveAndClose(onDone: () -> Unit) = persist(onDone, archive = false)
+
+    fun archiveAndClose(onDone: () -> Unit) = persist(onDone, archive = true)
+
+    private fun persist(onDone: () -> Unit, archive: Boolean) {
         val s = _state.value
         if (!s.loaded || (s.title.isBlank() && s.content.isBlank())) {
             onDone()
@@ -62,9 +67,11 @@ class NoteEditViewModel(
                     title = s.title.trim(),
                     content = s.content,
                     category = s.category.trim(),
-                    isPinned = s.pinned,
+                    isPinned = if (archive) false else s.pinned,
                     createdAt = old?.createdAt ?: now,
-                    updatedAt = now
+                    updatedAt = now,
+                    isDeleted = old?.isDeleted ?: false,
+                    isArchived = archive || (old?.isArchived ?: false)
                 )
             )
             onDone()

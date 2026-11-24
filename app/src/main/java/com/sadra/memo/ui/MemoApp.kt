@@ -30,9 +30,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.sadra.memo.ui.home.HomeScreen
+import com.sadra.memo.ui.notes.ArchiveScreen
 import com.sadra.memo.ui.notes.NoteEditScreen
 import com.sadra.memo.ui.notes.NotesScreen
 import com.sadra.memo.ui.notes.TrashScreen
+import com.sadra.memo.ui.planner.ClassEditScreen
 import com.sadra.memo.ui.planner.PlannerScreen
 import com.sadra.memo.ui.planner.TaskEditScreen
 import com.sadra.memo.ui.settings.SettingsScreen
@@ -98,15 +100,34 @@ fun MemoApp() {
             composable("notes") {
                 NotesScreen(
                     onOpen = { id -> navController.navigate("note_edit/$id") },
-                    onOpenTrash = { navController.navigate("trash") }
+                    onOpenTrash = { navController.navigate("trash") },
+                    onOpenArchive = { navController.navigate("archive") }
                 )
             }
             composable("planner") {
-                PlannerScreen(onOpenTask = { id -> navController.navigate("task_edit/$id") })
+                PlannerScreen(
+                    onOpenTask = { id -> navController.navigate("task_edit/$id") },
+                    onOpenClass = { id -> navController.navigate("class_edit/$id") }
+                )
             }
             composable("assistant") { ComingSoonScreen("دستیار هوشمند") }
             composable("settings") { SettingsScreen() }
             composable("trash") { TrashScreen(onBack = { navController.popBackStack() }) }
+            composable("archive") {
+                ArchiveScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpen = { id -> navController.navigate("note_edit/$id") }
+                )
+            }
+            composable(
+                route = "class_edit/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.LongType })
+            ) { entry ->
+                ClassEditScreen(
+                    classId = entry.arguments?.getLong("id") ?: 0L,
+                    onClose = { navController.popBackStack() }
+                )
+            }
             composable(
                 route = "note_edit/{id}",
                 arguments = listOf(navArgument("id") { type = NavType.LongType })

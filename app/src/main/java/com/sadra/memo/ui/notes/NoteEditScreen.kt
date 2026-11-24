@@ -65,6 +65,9 @@ fun NoteEditScreen(noteId: Long, onClose: () -> Unit) {
                 text = if (noteId > 0) "ویرایش یادداشت" else "یادداشت جدید",
                 modifier = Modifier.weight(1f)
             )
+            if (noteId > 0 && !state.archived) {
+                TextButton(onClick = { vm.archiveAndClose(onClose) }) { Text("آرشیو") }
+            }
             if (noteId > 0) {
                 IconButton(onClick = { showDelete = true }) {
                     Icon(Icons.Filled.Delete, contentDescription = "حذف")

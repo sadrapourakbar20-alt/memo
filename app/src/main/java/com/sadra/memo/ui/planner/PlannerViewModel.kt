@@ -4,26 +4,39 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sadra.memo.domain.model.Task
 import com.sadra.memo.domain.repository.TaskRepository
-import com.sadra.memo.reminder.ReminderScheduler
+import com.sadra.memo.domain.usecase.TaskManager
+import com.sadra.memo.util.Jalali
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
 
 class PlannerViewModel(
-    private val repository: TaskRepository,
-    private val scheduler: ReminderScheduler
+    repository: TaskRepository,
+    private val manager: TaskManager
 ) : ViewModel() {
 
     val tasks: StateFlow<List<Task>> = repository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun toggleDone(task: Task) {
+        viewModelScope.launch { manager.setDone(task, !task.isDone) }
+    }
+
+    /** ساعت قبلی کار رو نگه می‌داره و فقط روز رو عوض می‌کنه */
+    fun postpone(task: Task, date: LocalDate) {
         viewModelScope.launch {
-            val done = !task.isDone
-            repository.save(task.copy(isDone = done, progress = if (done) 100 else task.progress))
-            val due = task.dueAt
-            if (done || due == null) scheduler.cancel(task.id) else scheduler.schedule(task.id, task.title, due)
+            val oldTime = task.dueAt?.let { Jalali.dateTimeOf(it).toLocalTime() } ?: LocalTime.of(9, 0)
+            val zone = ZoneId.systemDefault()
+            var millis = LocalDateTime.of(date, oldTime).atZone(zone).toInstant().toEpochMilli()
+            if (millis <= System.currentTimeMillis()) {
+                millis = LocalDateTime.of(date, LocalTime.of(23, 59)).atZone(zone).toInstant().toEpochMilli()
+            }
+            manager.postpone(task, millis)
         }
     }
 }

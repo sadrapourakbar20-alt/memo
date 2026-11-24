@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -22,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,14 +43,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sadra.memo.MemoApplication
+import com.sadra.memo.domain.schedule.Recurrence
 import com.sadra.memo.ui.components.JalaliDatePickerDialog
 import com.sadra.memo.ui.factoryOf
 import com.sadra.memo.util.Jalali
+import com.sadra.memo.util.offsetLabel
 import com.sadra.memo.util.toPersianDigits
+
+private val taskOffsetOptions = listOf(0, 10, 30, 60, 1440)
 
 @Composable
 fun TaskEditScreen(taskId: Long, onClose: () -> Unit) {
@@ -56,13 +64,14 @@ fun TaskEditScreen(taskId: Long, onClose: () -> Unit) {
     val vm: TaskEditViewModel = viewModel(
         factory = remember(taskId) {
             factoryOf {
-                TaskEditViewModel(app.container.taskRepository, app.container.reminderScheduler, taskId)
+                TaskEditViewModel(app.container.taskRepository, app.container.taskManager, taskId)
             }
         }
     )
     val state by vm.state.collectAsState()
     var showDelete by remember { mutableStateOf(false) }
     var showDate by remember { mutableStateOf(false) }
+    var newSubtask by remember { mutableStateOf("") }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -85,10 +94,7 @@ fun TaskEditScreen(taskId: Long, onClose: () -> Unit) {
             .imePadding()
             .padding(horizontal = 8.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = save) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "ذخیره و بازگشت")
             }
@@ -127,10 +133,7 @@ fun TaskEditScreen(taskId: Long, onClose: () -> Unit) {
             )
 
             Text("اولویت", modifier = Modifier.padding(top = 16.dp))
-            Row(
-                modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Row(modifier = Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(0 to "کم", 1 to "متوسط", 2 to "زیاد").forEach { (value, label) ->
                     FilterChip(
                         selected = state.priority == value,
@@ -140,7 +143,7 @@ fun TaskEditScreen(taskId: Long, onClose: () -> Unit) {
                 }
             }
 
-            Text("زمان انجام و یادآوری", modifier = Modifier.padding(top = 16.dp))
+            Text("زمان انجام", modifier = Modifier.padding(top = 16.dp))
             Row(
                 modifier = Modifier.padding(top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -164,24 +167,88 @@ fun TaskEditScreen(taskId: Long, onClose: () -> Unit) {
                     TextButton(onClick = { vm.onDate(null) }) { Text("حذف زمان") }
                 }
             }
+
             if (state.date != null) {
-                Text(
-                    text = "در همین زمان برات اعلان میاد.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 6.dp)
+                Text("یادآوری (می‌تونی چند تا انتخاب کنی)", modifier = Modifier.padding(top = 16.dp))
+                LazyRow(
+                    modifier = Modifier.padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(taskOffsetOptions) { off ->
+                        FilterChip(
+                            selected = off in state.offsets,
+                            onClick = { vm.toggleOffset(off) },
+                            label = { Text(offsetLabel(off)) }
+                        )
+                    }
+                }
+
+                Text("تکرار", modifier = Modifier.padding(top = 16.dp))
+                LazyRow(
+                    modifier = Modifier.padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(Recurrence.labels.indices.toList()) { i ->
+                        FilterChip(
+                            selected = state.repeatType == i,
+                            onClick = { vm.onRepeat(i) },
+                            label = { Text(Recurrence.labels[i]) }
+                        )
+                    }
+                }
+                if (state.repeatType != Recurrence.NONE) {
+                    Text(
+                        text = "وقتی این کار رو انجام‌شده بزنی، نوبت بعدیش خودکار ساخته می‌شه.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
+            }
+
+            Text("زیرکارها", modifier = Modifier.padding(top = 16.dp))
+            state.subtasks.forEachIndexed { index, sub ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = sub.done, onCheckedChange = { vm.toggleSubtask(index) })
+                    Text(
+                        text = sub.title,
+                        textDecoration = if (sub.done) TextDecoration.LineThrough else null,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = { vm.removeSubtask(index) }) { Text("حذف") }
+                }
+            }
+            Row(
+                modifier = Modifier.padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = newSubtask,
+                    onValueChange = { newSubtask = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("زیرکار جدید") },
+                    singleLine = true
                 )
+                TextButton(onClick = { vm.addSubtask(newSubtask); newSubtask = "" }) { Text("افزودن") }
             }
 
             Text(
                 text = "پیشرفت: " + (state.progress.toString() + "٪").toPersianDigits(),
                 modifier = Modifier.padding(top = 16.dp)
             )
-            Slider(
-                value = state.progress.toFloat(),
-                onValueChange = { vm.onProgress(it.toInt()) },
-                valueRange = 0f..100f
-            )
+            if (state.subtasks.isEmpty()) {
+                Slider(
+                    value = state.progress.toFloat(),
+                    onValueChange = { vm.onProgress(it.toInt()) },
+                    valueRange = 0f..100f
+                )
+            } else {
+                Text(
+                    text = "با زیرکارها حساب می‌شه.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 

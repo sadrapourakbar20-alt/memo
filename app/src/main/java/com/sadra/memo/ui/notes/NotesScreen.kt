@@ -22,6 +22,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,7 +38,7 @@ import com.sadra.memo.domain.model.Note
 import com.sadra.memo.ui.factoryOf
 
 @Composable
-fun NotesScreen(onOpen: (Long) -> Unit, onOpenTrash: () -> Unit) {
+fun NotesScreen(onOpen: (Long) -> Unit, onOpenTrash: () -> Unit, onOpenArchive: () -> Unit) {
     val app = LocalContext.current.applicationContext as MemoApplication
     val vm: NotesViewModel = viewModel(
         factory = remember { factoryOf { NotesViewModel(app.container.noteRepository) } }
@@ -57,6 +58,7 @@ fun NotesScreen(onOpen: (Long) -> Unit, onOpenTrash: () -> Unit) {
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.weight(1f)
             )
+            TextButton(onClick = onOpenArchive) { Text("آرشیو") }
             IconButton(onClick = onOpenTrash) {
                 Icon(Icons.Filled.Delete, contentDescription = "سطل زباله")
             }

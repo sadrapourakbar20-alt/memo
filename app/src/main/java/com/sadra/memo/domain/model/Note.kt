@@ -8,5 +8,6 @@ data class Note(
     val isPinned: Boolean = false,
     val createdAt: Long,
     val updatedAt: Long,
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    val isArchived: Boolean = false
 )

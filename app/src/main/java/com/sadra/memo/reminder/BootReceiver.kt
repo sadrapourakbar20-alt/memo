@@ -14,11 +14,8 @@ class BootReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val tasks = app.container.taskRepository.getUpcomingWithDueDate(System.currentTimeMillis())
-                tasks.forEach { task ->
-                    val due = task.dueAt
-                    if (due != null) app.container.reminderScheduler.schedule(task.id, task.title, due)
-                }
+                app.container.taskManager.rescheduleAll()
+                app.container.classScheduler.rescheduleAll()
             } finally {
                 pending.finish()
             }
