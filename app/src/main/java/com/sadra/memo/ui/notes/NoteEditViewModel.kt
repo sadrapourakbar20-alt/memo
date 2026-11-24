@@ -73,7 +73,7 @@ class NoteEditViewModel(
 
     fun deleteAndClose(onDone: () -> Unit) {
         viewModelScope.launch {
-            if (noteId > 0) repository.delete(noteId)
+            if (noteId > 0) repository.moveToTrash(noteId)
             onDone()
         }
     }

@@ -12,9 +12,10 @@ data class NoteEntity(
     val category: String,
     val isPinned: Boolean,
     val createdAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val isDeleted: Boolean = false
 )
 
-fun NoteEntity.toDomain() = Note(id, title, content, category, isPinned, createdAt, updatedAt)
+fun NoteEntity.toDomain() = Note(id, title, content, category, isPinned, createdAt, updatedAt, isDeleted)
 
-fun Note.toEntity() = NoteEntity(id, title, content, category, isPinned, createdAt, updatedAt)
+fun Note.toEntity() = NoteEntity(id, title, content, category, isPinned, createdAt, updatedAt, isDeleted)

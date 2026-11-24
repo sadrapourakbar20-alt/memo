@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
@@ -69,6 +70,9 @@ fun NoteEditScreen(noteId: Long, onClose: () -> Unit) {
                     Icon(Icons.Filled.Delete, contentDescription = "حذف")
                 }
             }
+            IconButton(onClick = { vm.saveAndClose(onClose) }) {
+                Icon(Icons.Filled.Check, contentDescription = "ذخیره")
+            }
         }
 
         Column(
@@ -112,11 +116,11 @@ fun NoteEditScreen(noteId: Long, onClose: () -> Unit) {
     if (showDelete) {
         AlertDialog(
             onDismissRequest = { showDelete = false },
-            title = { Text("حذف یادداشت") },
-            text = { Text("این یادداشت برای همیشه پاک می‌شه. مطمئنی؟") },
+            title = { Text("انتقال به سطل زباله") },
+            text = { Text("یادداشت به سطل زباله می‌ره و می‌تونی از اونجا برش گردونی.") },
             confirmButton = {
                 TextButton(onClick = { showDelete = false; vm.deleteAndClose(onClose) }) {
-                    Text("حذف")
+                    Text("انتقال")
                 }
             },
             dismissButton = {

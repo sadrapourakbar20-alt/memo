@@ -9,11 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,31 +37,63 @@ import com.sadra.memo.domain.model.Note
 import com.sadra.memo.ui.factoryOf
 
 @Composable
-fun NotesScreen(onOpen: (Long) -> Unit) {
+fun NotesScreen(onOpen: (Long) -> Unit, onOpenTrash: () -> Unit) {
     val app = LocalContext.current.applicationContext as MemoApplication
     val vm: NotesViewModel = viewModel(
         factory = remember { factoryOf { NotesViewModel(app.container.noteRepository) } }
     )
     val notes by vm.notes.collectAsState()
     val query by vm.query.collectAsState()
+    val categories by vm.categories.collectAsState()
+    val selected by vm.selectedCategory.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        Text(
-            text = "یادداشت‌ها",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(top = 16.dp, bottom = 12.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "یادداشت‌ها",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onOpenTrash) {
+                Icon(Icons.Filled.Delete, contentDescription = "سطل زباله")
+            }
+        }
         OutlinedTextField(
             value = query,
             onValueChange = vm::onQueryChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             placeholder = { Text("جست‌وجو در یادداشت‌ها") },
             singleLine = true
         )
+        if (categories.isNotEmpty()) {
+            LazyRow(
+                modifier = Modifier.padding(top = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = selected == null,
+                        onClick = { vm.onCategory(null) },
+                        label = { Text("همه") }
+                    )
+                }
+                items(categories) { c ->
+                    FilterChip(
+                        selected = selected == c,
+                        onClick = { vm.onCategory(if (selected == c) null else c) },
+                        label = { Text(c) }
+                    )
+                }
+            }
+        }
         if (notes.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = if (query.isBlank()) "هنوز یادداشتی نداری. با دکمه + اولین یادداشت رو بساز."
+                    text = if (query.isBlank() && selected == null)
+                        "هنوز یادداشتی نداری. با دکمه + اولین یادداشت رو بساز."
                     else "نتیجه‌ای پیدا نشد.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

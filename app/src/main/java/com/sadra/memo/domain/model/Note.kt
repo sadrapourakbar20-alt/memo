@@ -7,5 +7,6 @@ data class Note(
     val category: String = "",
     val isPinned: Boolean = false,
     val createdAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val isDeleted: Boolean = false
 )

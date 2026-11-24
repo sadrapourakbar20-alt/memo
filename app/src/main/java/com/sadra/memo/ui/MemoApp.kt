@@ -29,8 +29,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.sadra.memo.ui.home.HomeScreen
 import com.sadra.memo.ui.notes.NoteEditScreen
 import com.sadra.memo.ui.notes.NotesScreen
+import com.sadra.memo.ui.notes.TrashScreen
+import com.sadra.memo.ui.planner.PlannerScreen
+import com.sadra.memo.ui.planner.TaskEditScreen
+import com.sadra.memo.ui.settings.SettingsScreen
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
 
@@ -47,18 +52,21 @@ fun MemoApp() {
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
-    val inEditor = currentRoute?.startsWith("note_edit") == true
+    val hideChrome = currentRoute != null && tabs.none { it.route == currentRoute }
 
     Scaffold(
         floatingActionButton = {
-            if (!inEditor) {
-                FloatingActionButton(onClick = { navController.navigate("note_edit/0") }) {
+            if (!hideChrome) {
+                FloatingActionButton(onClick = {
+                    if (currentRoute == "planner") navController.navigate("task_edit/0")
+                    else navController.navigate("note_edit/0")
+                }) {
                     Icon(Icons.Filled.Add, contentDescription = "ثبت سریع")
                 }
             }
         },
         bottomBar = {
-            if (!inEditor) NavigationBar {
+            if (!hideChrome) NavigationBar {
                 tabs.forEach { tab ->
                     NavigationBarItem(
                         selected = currentRoute == tab.route,
@@ -81,9 +89,24 @@ fun MemoApp() {
             startDestination = "home",
             modifier = Modifier.padding(padding)
         ) {
-            composable("notes") {
-                NotesScreen(onOpen = { id -> navController.navigate("note_edit/$id") })
+            composable("home") {
+                HomeScreen(
+                    onOpenNote = { id -> navController.navigate("note_edit/$id") },
+                    onOpenTask = { id -> navController.navigate("task_edit/$id") }
+                )
             }
+            composable("notes") {
+                NotesScreen(
+                    onOpen = { id -> navController.navigate("note_edit/$id") },
+                    onOpenTrash = { navController.navigate("trash") }
+                )
+            }
+            composable("planner") {
+                PlannerScreen(onOpenTask = { id -> navController.navigate("task_edit/$id") })
+            }
+            composable("assistant") { ComingSoonScreen("دستیار هوشمند") }
+            composable("settings") { SettingsScreen() }
+            composable("trash") { TrashScreen(onBack = { navController.popBackStack() }) }
             composable(
                 route = "note_edit/{id}",
                 arguments = listOf(navArgument("id") { type = NavType.LongType })
@@ -93,19 +116,26 @@ fun MemoApp() {
                     onClose = { navController.popBackStack() }
                 )
             }
-            tabs.filter { it.route != "notes" }.forEach { tab ->
-                composable(tab.route) { PlaceholderScreen(tab.label) }
+            composable(
+                route = "task_edit/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.LongType })
+            ) { entry ->
+                TaskEditScreen(
+                    taskId = entry.arguments?.getLong("id") ?: 0L,
+                    onClose = { navController.popBackStack() }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun PlaceholderScreen(title: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text = title, style = MaterialTheme.typography.headlineMedium)
+private fun ComingSoonScreen(title: String) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(
+            text = title + "\nبه‌زودی",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
