@@ -76,7 +76,7 @@ class ReminderReceiver : BroadcastReceiver() {
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, NotificationHelper.channelId(context))
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title.ifBlank { "یادآوری" })
             .setContentText(body)

@@ -40,7 +40,7 @@ import com.sadra.memo.ui.factoryOf
 fun TrashScreen(onBack: () -> Unit) {
     val app = LocalContext.current.applicationContext as MemoApplication
     val vm: TrashViewModel = viewModel(
-        factory = remember { factoryOf { TrashViewModel(app.container.noteRepository) } }
+        factory = remember { factoryOf { TrashViewModel(app.container.noteRepository, app.container.attachmentManager) } }
     )
     val notes by vm.notes.collectAsState()
     var pendingDelete by remember { mutableStateOf<Note?>(null) }

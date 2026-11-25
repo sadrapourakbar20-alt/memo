@@ -3,6 +3,7 @@ package com.sadra.memo.ui.settings
 import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
+import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -25,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,7 +41,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.biometric.BiometricManager
+import androidx.core.content.IntentCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sadra.memo.reminder.NotificationHelper
 import com.sadra.memo.MemoApplication
 import com.sadra.memo.data.preferences.ThemeMode
 import com.sadra.memo.ui.factoryOf
@@ -62,6 +67,8 @@ fun SettingsScreen() {
     )
     val mode by vm.themeMode.collectAsState()
     val hasPin by vm.hasPin.collectAsState()
+    val biometricOn by vm.biometricEnabled.collectAsState()
+    var soundTitle by remember { mutableStateOf<String?>(null) }
     val message by vm.message.collectAsState()
 
     var showSetPin by remember { mutableStateOf(false) }
@@ -75,6 +82,28 @@ fun SettingsScreen() {
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> if (uri != null) pendingImport = uri }
+
+    fun refreshSoundTitle() {
+        val saved = NotificationHelper.soundUri(context)
+        soundTitle = if (saved == null) null else try {
+            RingtoneManager.getRingtone(context, Uri.parse(saved))?.getTitle(context)
+        } catch (e: Exception) {
+            null
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) { refreshSoundTitle() }
+
+    val soundLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val data = result.data
+        if (data != null) {
+            val picked = IntentCompat.getParcelableExtra(data, RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
+            NotificationHelper.setSound(context, picked)
+            refreshSoundTitle()
+        }
+    }
+
+    val canBiometric = BiometricManager.from(context)
+        .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_SUCCESS
 
     val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
     val canExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
@@ -129,6 +158,25 @@ fun SettingsScreen() {
                         modifier = Modifier.padding(top = 10.dp)
                     ) { Text("فعال کردن آلارم دقیق") }
                 }
+                Text(
+                    text = "صدای اعلان: " + (soundTitle ?: "پیش‌فرض گوشی"),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+                OutlinedButton(
+                    onClick = {
+                        val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "صدای یادآوری")
+                            val cur = NotificationHelper.soundUri(context)
+                            if (cur != null) putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, Uri.parse(cur))
+                        }
+                        soundLauncher.launch(intent)
+                    },
+                    modifier = Modifier.padding(top = 6.dp)
+                ) { Text("انتخاب صدای اعلان") }
             }
         }
 
@@ -148,6 +196,22 @@ fun SettingsScreen() {
                         OutlinedButton(onClick = { showDisablePin = true }) { Text("غیرفعال کردن") }
                     } else {
                         Button(onClick = { showSetPin = true }) { Text("فعال کردن قفل") }
+                    }
+                }
+                if (hasPin) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (canBiometric) "ورود با اثر انگشت" else "اثر انگشت روی این گوشی تنظیم نشده",
+                            modifier = Modifier.weight(1f)
+                        )
+                        Switch(
+                            checked = biometricOn && canBiometric,
+                            enabled = canBiometric,
+                            onCheckedChange = { vm.setBiometric(it) }
+                        )
                     }
                 }
                 Text(
@@ -184,7 +248,7 @@ fun SettingsScreen() {
         }
 
         Text(
-            text = "Memo نسخه ۰٫۳",
+            text = "Memo نسخه ۰٫۴",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

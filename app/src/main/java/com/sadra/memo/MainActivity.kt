@@ -2,10 +2,11 @@ package com.sadra.memo
 
 import android.graphics.Color
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -22,12 +23,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import com.sadra.memo.data.preferences.ThemeMode
 import com.sadra.memo.ui.LockScreen
 import com.sadra.memo.ui.MemoApp
 import com.sadra.memo.ui.theme.MemoTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     private var unlocked by mutableStateOf(false)
     private var pinEnabled = false
@@ -37,6 +40,28 @@ class MainActivity : ComponentActivity() {
         if (pinEnabled) unlocked = false
     }
 
+    private fun showBiometric() {
+        val info = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("باز کردن Memo")
+            .setNegativeButtonText("استفاده از رمز")
+            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
+            .build()
+        val prompt = BiometricPrompt(
+            this,
+            ContextCompat.getMainExecutor(this),
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    unlocked = true
+                }
+            }
+        )
+        prompt.authenticate(info)
+    }
+
+    private fun biometricAvailable(): Boolean =
+        BiometricManager.from(this)
+            .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_SUCCESS
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val app = application as MemoApplication
@@ -44,6 +69,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val mode by settings.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
             val pinHash by settings.pinHash.collectAsState(initial = null)
+            val biometricOn by settings.biometricEnabled.collectAsState(initial = false)
             val systemDark = isSystemInDarkTheme()
             val dark = when (mode) {
                 ThemeMode.SYSTEM -> systemDark
@@ -77,7 +103,9 @@ class MainActivity : ComponentActivity() {
                         )
                         !hash.isNullOrEmpty() && !unlocked -> LockScreen(
                             verify = { pin -> settings.verifyPin(pin) },
-                            onUnlocked = { unlocked = true }
+                            onUnlocked = { unlocked = true },
+                            biometricEnabled = biometricOn && biometricAvailable(),
+                            onBiometric = { showBiometric() }
                         )
                         else -> MemoApp()
                     }

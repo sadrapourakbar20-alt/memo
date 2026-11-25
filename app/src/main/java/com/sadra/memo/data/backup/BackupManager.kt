@@ -4,10 +4,13 @@ import android.content.ContentResolver
 import android.net.Uri
 import androidx.room.withTransaction
 import com.sadra.memo.data.database.AppDatabase
+import com.sadra.memo.data.entities.AccountEntity
+import com.sadra.memo.data.entities.AttachmentEntity
 import com.sadra.memo.data.entities.CancellationEntity
 import com.sadra.memo.data.entities.ClassEntity
 import com.sadra.memo.data.entities.NoteEntity
 import com.sadra.memo.data.entities.TaskEntity
+import com.sadra.memo.data.entities.TransactionEntity
 import com.sadra.memo.data.preferences.SettingsRepository
 import com.sadra.memo.domain.model.SemesterConfig
 import kotlinx.coroutines.Dispatchers
@@ -72,6 +75,35 @@ class BackupManager(
             )
         }
         root.put("cancellations", cancellations)
+
+        val accounts = JSONArray()
+        db.financeDao().getAccounts().forEach { a ->
+            accounts.put(
+                JSONObject().put("id", a.id).put("name", a.name).put("type", a.type)
+                    .put("initialBalance", a.initialBalance).put("createdAt", a.createdAt)
+            )
+        }
+        root.put("accounts", accounts)
+
+        val txs = JSONArray()
+        db.financeDao().getAllTransactions().forEach { t ->
+            txs.put(
+                JSONObject().put("id", t.id).put("accountId", t.accountId).put("type", t.type)
+                    .put("amount", t.amount).put("title", t.title).put("category", t.category)
+                    .put("dateMillis", t.dateMillis).put("createdAt", t.createdAt)
+            )
+        }
+        root.put("transactions", txs)
+
+        val atts = JSONArray()
+        db.attachmentDao().getAll().forEach { a ->
+            atts.put(
+                JSONObject().put("id", a.id).put("noteId", a.noteId).put("kind", a.kind)
+                    .put("name", a.name).put("path", a.path).put("mime", a.mime)
+                    .put("createdAt", a.createdAt)
+            )
+        }
+        root.put("attachments", atts)
 
         val sem = settings.semesterConfig.first()
         root.put(
@@ -145,6 +177,45 @@ class BackupManager(
             )
         }
 
+        val accounts = ArrayList<AccountEntity>()
+        val aa = root.optJSONArray("accounts") ?: JSONArray()
+        for (i in 0 until aa.length()) {
+            val o = aa.getJSONObject(i)
+            accounts.add(
+                AccountEntity(
+                    id = o.getLong("id"), name = o.getString("name"), type = o.getInt("type"),
+                    initialBalance = o.getLong("initialBalance"), createdAt = o.getLong("createdAt")
+                )
+            )
+        }
+
+        val txs = ArrayList<TransactionEntity>()
+        val tx = root.optJSONArray("transactions") ?: JSONArray()
+        for (i in 0 until tx.length()) {
+            val o = tx.getJSONObject(i)
+            txs.add(
+                TransactionEntity(
+                    id = o.getLong("id"), accountId = o.getLong("accountId"), type = o.getInt("type"),
+                    amount = o.getLong("amount"), title = o.getString("title"),
+                    category = o.getString("category"), dateMillis = o.getLong("dateMillis"),
+                    createdAt = o.getLong("createdAt")
+                )
+            )
+        }
+
+        val atts = ArrayList<AttachmentEntity>()
+        val at = root.optJSONArray("attachments") ?: JSONArray()
+        for (i in 0 until at.length()) {
+            val o = at.getJSONObject(i)
+            atts.add(
+                AttachmentEntity(
+                    id = o.getLong("id"), noteId = o.getLong("noteId"), kind = o.getInt("kind"),
+                    name = o.getString("name"), path = o.getString("path"), mime = o.getString("mime"),
+                    createdAt = o.getLong("createdAt")
+                )
+            )
+        }
+
         var semester: SemesterConfig? = null
         val so = root.optJSONObject("semester")
         if (so != null) {
@@ -161,6 +232,12 @@ class BackupManager(
             db.taskDao().clearAll()
             db.classDao().clearClasses()
             db.classDao().clearCancellations()
+            db.financeDao().clearAccounts()
+            db.financeDao().clearTransactions()
+            db.attachmentDao().clearAll()
+            accounts.forEach { db.financeDao().upsertAccount(it) }
+            txs.forEach { db.financeDao().upsertTransaction(it) }
+            atts.forEach { db.attachmentDao().upsert(it) }
             notes.forEach { db.noteDao().upsert(it) }
             tasks.forEach { db.taskDao().upsert(it) }
             classes.forEach { db.classDao().upsert(it) }

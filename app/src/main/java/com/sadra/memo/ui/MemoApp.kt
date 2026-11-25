@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -29,6 +30,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.sadra.memo.ui.assistant.AssistantScreen
+import com.sadra.memo.ui.finance.AccountDetailScreen
+import com.sadra.memo.ui.finance.AccountEditScreen
+import com.sadra.memo.ui.finance.FinanceScreen
+import com.sadra.memo.ui.finance.TxEditScreen
 import com.sadra.memo.ui.home.HomeScreen
 import com.sadra.memo.ui.notes.ArchiveScreen
 import com.sadra.memo.ui.notes.NoteEditScreen
@@ -45,6 +51,7 @@ private val tabs = listOf(
     Tab("home", "خانه", Icons.Filled.Home),
     Tab("notes", "یادداشت‌ها", Icons.Filled.Create),
     Tab("planner", "برنامه‌ریز", Icons.Filled.CheckCircle),
+    Tab("finance", "مالی", Icons.Filled.ShoppingCart),
     Tab("assistant", "دستیار", Icons.Filled.Star),
     Tab("settings", "تنظیمات", Icons.Filled.Settings)
 )
@@ -55,13 +62,17 @@ fun MemoApp() {
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
     val hideChrome = currentRoute != null && tabs.none { it.route == currentRoute }
+    val showFab = currentRoute in listOf("home", "notes", "planner", "finance")
 
     Scaffold(
         floatingActionButton = {
-            if (!hideChrome) {
+            if (showFab) {
                 FloatingActionButton(onClick = {
-                    if (currentRoute == "planner") navController.navigate("task_edit/0")
-                    else navController.navigate("note_edit/0")
+                    when (currentRoute) {
+                        "planner" -> navController.navigate("task_edit/0")
+                        "finance" -> navController.navigate("tx_edit/0/0")
+                        else -> navController.navigate("note_edit/0")
+                    }
                 }) {
                     Icon(Icons.Filled.Add, contentDescription = "ثبت سریع")
                 }
@@ -110,7 +121,60 @@ fun MemoApp() {
                     onOpenClass = { id -> navController.navigate("class_edit/$id") }
                 )
             }
-            composable("assistant") { ComingSoonScreen("دستیار هوشمند") }
+            composable("finance") {
+                FinanceScreen(
+                    onAddAccount = { navController.navigate("account_edit/0") },
+                    onOpenAccount = { id -> navController.navigate("account/$id") },
+                    onAddTx = { type -> navController.navigate("tx_edit/0/$type") },
+                    onOpenTx = { id -> navController.navigate("tx_edit/$id/0") }
+                )
+            }
+            composable("assistant") {
+                AssistantScreen(
+                    onOpenNote = { id -> navController.navigate("note_edit/$id") },
+                    onOpenTask = { id -> navController.navigate("task_edit/$id") }
+                )
+            }
+            composable(
+                route = "account/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.LongType })
+            ) { entry ->
+                val accountId = entry.arguments?.getLong("id") ?: 0L
+                AccountDetailScreen(
+                    accountId = accountId,
+                    onBack = { navController.popBackStack() },
+                    onEditAccount = { navController.navigate("account_edit/$accountId") },
+                    onOpenTx = { id -> navController.navigate("tx_edit/$id/0") }
+                )
+            }
+            composable(
+                route = "account_edit/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.LongType })
+            ) { entry ->
+                AccountEditScreen(
+                    accountId = entry.arguments?.getLong("id") ?: 0L,
+                    onClose = { navController.popBackStack() },
+                    onDeleted = {
+                        // اگه از صفحه جزئیات همین حساب اومده بودیم، یه صفحه بیشتر برمی‌گردیم
+                        navController.popBackStack()
+                        if (navController.currentDestination?.route == "account/{id}") navController.popBackStack()
+                    }
+                )
+            }
+            composable(
+                route = "tx_edit/{id}/{type}",
+                arguments = listOf(
+                    navArgument("id") { type = NavType.LongType },
+                    navArgument("type") { type = NavType.IntType }
+                )
+            ) { entry ->
+                TxEditScreen(
+                    txId = entry.arguments?.getLong("id") ?: 0L,
+                    presetType = entry.arguments?.getInt("type") ?: 0,
+                    onClose = { navController.popBackStack() },
+                    onAddAccount = { navController.navigate("account_edit/0") }
+                )
+            }
             composable("settings") { SettingsScreen() }
             composable("trash") { TrashScreen(onBack = { navController.popBackStack() }) }
             composable("archive") {

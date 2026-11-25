@@ -25,6 +25,7 @@ class SettingsRepository(private val context: Context) {
     private val semEndKey = longPreferencesKey("semester_end")
     private val semInvertKey = booleanPreferencesKey("semester_invert")
     private val pinKey = stringPreferencesKey("pin_hash")
+    private val biometricKey = booleanPreferencesKey("biometric_enabled")
 
     val themeMode: Flow<ThemeMode> = context.settingsDataStore.data.map { prefs ->
         when (prefs[themeKey]) {
@@ -85,7 +86,16 @@ class SettingsRepository(private val context: Context) {
     }
 
     suspend fun clearPin() {
-        context.settingsDataStore.edit { it.remove(pinKey) }
+        context.settingsDataStore.edit {
+            it.remove(pinKey)
+            it.remove(biometricKey)
+        }
+    }
+
+    val biometricEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[biometricKey] ?: false }
+
+    suspend fun setBiometric(value: Boolean) {
+        context.settingsDataStore.edit { it[biometricKey] = value }
     }
 
     suspend fun verifyPin(pin: String): Boolean {

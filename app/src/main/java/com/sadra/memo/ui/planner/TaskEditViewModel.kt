@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sadra.memo.domain.model.Subtask
 import com.sadra.memo.domain.model.Task
+import com.sadra.memo.domain.nlu.PersianParser
 import com.sadra.memo.domain.repository.TaskRepository
 import com.sadra.memo.domain.usecase.TaskManager
 import com.sadra.memo.util.JDate
@@ -75,6 +76,22 @@ class TaskEditViewModel(
     fun onDate(v: JDate?) { _state.value = _state.value.copy(date = v) }
     fun onTime(h: Int, m: Int) { _state.value = _state.value.copy(hour = h, minute = m) }
     fun onRepeat(v: Int) { _state.value = _state.value.copy(repeatType = v) }
+
+    /** متن گفتاری رو تحلیل می‌کنه و عنوان، تاریخ و ساعت رو پر می‌کنه */
+    fun applySpoken(text: String) {
+        val parsed = PersianParser.parse(text)
+        val due = parsed.dueAt
+        var next = _state.value.copy(title = parsed.title.ifBlank { text.trim() })
+        if (due != null) {
+            val dt = Jalali.dateTimeOf(due)
+            next = next.copy(
+                date = Jalali.fromLocalDate(dt.toLocalDate()),
+                hour = if (parsed.hasTime) dt.hour else next.hour,
+                minute = if (parsed.hasTime) dt.minute else next.minute
+            )
+        }
+        _state.value = next
+    }
 
     fun toggleOffset(v: Int) {
         val cur = _state.value.offsets

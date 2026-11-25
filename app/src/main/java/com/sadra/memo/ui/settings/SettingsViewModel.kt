@@ -30,6 +30,13 @@ class SettingsViewModel(
         .map { !it.isNullOrEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val biometricEnabled: StateFlow<Boolean> = repository.biometricEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun setBiometric(value: Boolean) {
+        viewModelScope.launch { repository.setBiometric(value) }
+    }
+
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message
 

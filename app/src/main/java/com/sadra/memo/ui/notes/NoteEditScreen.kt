@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sadra.memo.MemoApplication
+import com.sadra.memo.ui.components.SpeechButton
 import com.sadra.memo.ui.factoryOf
 
 @Composable
@@ -40,10 +41,11 @@ fun NoteEditScreen(noteId: Long, onClose: () -> Unit) {
     val app = LocalContext.current.applicationContext as MemoApplication
     val vm: NoteEditViewModel = viewModel(
         factory = remember(noteId) {
-            factoryOf { NoteEditViewModel(app.container.noteRepository, noteId) }
+            factoryOf { NoteEditViewModel(app.container.noteRepository, app.container.attachmentManager, noteId) }
         }
     )
     val state by vm.state.collectAsState()
+    val attachments by vm.attachments.collectAsState()
     var showDelete by remember { mutableStateOf(false) }
 
     BackHandler { vm.saveAndClose(onClose) }
@@ -112,6 +114,14 @@ fun NoteEditScreen(noteId: Long, onClose: () -> Unit) {
                     .heightIn(min = 240.dp)
                     .padding(top = 12.dp),
                 label = { Text("متن یادداشت") }
+            )
+            SpeechButton(label = "گفتار به متن", modifier = Modifier.padding(top = 8.dp)) { vm.appendContent(it) }
+            AttachmentSection(
+                attachments = attachments,
+                manager = app.container.attachmentManager,
+                onPicked = vm::addFromUri,
+                onRecorded = vm::addRecorded,
+                onRemove = vm::removeAttachment
             )
         }
     }

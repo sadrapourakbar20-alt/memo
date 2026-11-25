@@ -50,6 +50,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sadra.memo.MemoApplication
 import com.sadra.memo.domain.schedule.Recurrence
 import com.sadra.memo.ui.components.JalaliDatePickerDialog
+import com.sadra.memo.ui.components.SpeechButton
 import com.sadra.memo.ui.factoryOf
 import com.sadra.memo.util.Jalali
 import com.sadra.memo.util.offsetLabel
@@ -125,6 +126,9 @@ fun TaskEditScreen(taskId: Long, onClose: () -> Unit) {
                 label = { Text("عنوان کار") },
                 singleLine = true
             )
+            SpeechButton(label = "گفتار (مثلاً: فردا ساعت ۱۰ صبح تماس با مشتری)", modifier = Modifier.padding(top = 8.dp)) {
+                vm.applySpoken(it)
+            }
             OutlinedTextField(
                 value = state.description,
                 onValueChange = vm::onDescription,

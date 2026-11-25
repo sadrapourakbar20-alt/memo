@@ -11,7 +11,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,10 +27,19 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 @Composable
-fun LockScreen(verify: suspend (String) -> Boolean, onUnlocked: () -> Unit) {
+fun LockScreen(
+    verify: suspend (String) -> Boolean,
+    onUnlocked: () -> Unit,
+    biometricEnabled: Boolean = false,
+    onBiometric: () -> Unit = {}
+) {
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(biometricEnabled) {
+        if (biometricEnabled) onBiometric()
+    }
 
     fun submit() {
         scope.launch {
@@ -74,5 +85,8 @@ fun LockScreen(verify: suspend (String) -> Boolean, onUnlocked: () -> Unit) {
             )
         }
         Button(onClick = { submit() }, modifier = Modifier.padding(top = 16.dp)) { Text("باز کردن") }
+        if (biometricEnabled) {
+            TextButton(onClick = onBiometric) { Text("ورود با اثر انگشت") }
+        }
     }
 }

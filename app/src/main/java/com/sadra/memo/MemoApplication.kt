@@ -1,10 +1,8 @@
 package com.sadra.memo
 
 import android.app.Application
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import com.sadra.memo.di.AppContainer
-import com.sadra.memo.reminder.ReminderReceiver
+import com.sadra.memo.reminder.NotificationHelper
 import kotlinx.coroutines.launch
 
 class MemoApplication : Application() {
@@ -14,12 +12,7 @@ class MemoApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
-        val channel = NotificationChannel(
-            ReminderReceiver.CHANNEL_ID,
-            "یادآوری‌ها",
-            NotificationManager.IMPORTANCE_HIGH
-        ).apply { description = "یادآوری کارها و کلاس‌ها" }
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        NotificationHelper.ensureChannel(this)
 
         container.appScope.launch {
             container.taskManager.rescheduleAll()
