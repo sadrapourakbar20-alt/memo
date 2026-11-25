@@ -35,4 +35,6 @@ class FinanceRepositoryImpl(private val dao: FinanceDao) : FinanceRepository {
     override suspend fun saveTransaction(tx: MoneyTx): Long = dao.upsertTransaction(tx.toEntity())
 
     override suspend fun deleteTransaction(id: Long) = dao.deleteTransaction(id)
+
+    override suspend fun hasSmsHash(hash: String): Boolean = dao.countByHash(hash) > 0
 }

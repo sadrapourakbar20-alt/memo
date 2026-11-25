@@ -37,6 +37,18 @@ class SettingsViewModel(
         viewModelScope.launch { repository.setBiometric(value) }
     }
 
+    val smsEnabled: StateFlow<Boolean> = repository.smsEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val smsRial: StateFlow<Boolean> = repository.smsRial
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val smsAuto: StateFlow<Boolean> = repository.smsAuto
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun setSmsEnabled(v: Boolean) { viewModelScope.launch { repository.setSmsEnabled(v) } }
+    fun setSmsRial(v: Boolean) { viewModelScope.launch { repository.setSmsRial(v) } }
+    fun setSmsAuto(v: Boolean) { viewModelScope.launch { repository.setSmsAuto(v) } }
+    fun showMessage(text: String) { _message.value = text }
+
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message
 

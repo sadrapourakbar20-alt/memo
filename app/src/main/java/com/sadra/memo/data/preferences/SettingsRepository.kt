@@ -26,6 +26,9 @@ class SettingsRepository(private val context: Context) {
     private val semInvertKey = booleanPreferencesKey("semester_invert")
     private val pinKey = stringPreferencesKey("pin_hash")
     private val biometricKey = booleanPreferencesKey("biometric_enabled")
+    private val smsEnabledKey = booleanPreferencesKey("sms_enabled")
+    private val smsRialKey = booleanPreferencesKey("sms_rial")
+    private val smsAutoKey = booleanPreferencesKey("sms_auto")
 
     val themeMode: Flow<ThemeMode> = context.settingsDataStore.data.map { prefs ->
         when (prefs[themeKey]) {
@@ -91,6 +94,14 @@ class SettingsRepository(private val context: Context) {
             it.remove(biometricKey)
         }
     }
+
+    val smsEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[smsEnabledKey] ?: false }
+    val smsRial: Flow<Boolean> = context.settingsDataStore.data.map { it[smsRialKey] ?: true }
+    val smsAuto: Flow<Boolean> = context.settingsDataStore.data.map { it[smsAutoKey] ?: true }
+
+    suspend fun setSmsEnabled(v: Boolean) { context.settingsDataStore.edit { it[smsEnabledKey] = v } }
+    suspend fun setSmsRial(v: Boolean) { context.settingsDataStore.edit { it[smsRialKey] = v } }
+    suspend fun setSmsAuto(v: Boolean) { context.settingsDataStore.edit { it[smsAutoKey] = v } }
 
     val biometricEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[biometricKey] ?: false }
 

@@ -29,17 +29,19 @@ import com.sadra.memo.ui.factoryOf
 import com.sadra.memo.util.Jalali
 import com.sadra.memo.util.accountTypeLabels
 import com.sadra.memo.util.formatMoney
+import com.sadra.memo.util.toPersianDigits
 
 @Composable
 fun FinanceScreen(
     onAddAccount: () -> Unit,
     onOpenAccount: (Long) -> Unit,
     onAddTx: (Int) -> Unit,
-    onOpenTx: (Long) -> Unit
+    onOpenTx: (Long) -> Unit,
+    onOpenInbox: () -> Unit
 ) {
     val app = LocalContext.current.applicationContext as MemoApplication
     val vm: FinanceViewModel = viewModel(
-        factory = remember { factoryOf { FinanceViewModel(app.container.financeRepository) } }
+        factory = remember { factoryOf { FinanceViewModel(app.container.financeRepository, app.container.smsInboxRepository) } }
     )
     val state by vm.state.collectAsState()
     val cardColors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -52,6 +54,26 @@ fun FinanceScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("مالی", style = MaterialTheme.typography.headlineSmall)
+
+        if (state.pendingSms > 0) {
+            Card(
+                onClick = onOpenInbox,
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = (state.pendingSms.toString() + " تراکنش از پیامک منتظر انتخاب حسابه").toPersianDigits(),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        "برای دیدن و ثبتشون اینجا بزن.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
 
         if (state.loaded && state.accounts.isEmpty()) {
             Card(modifier = Modifier.fillMaxWidth(), colors = cardColors) {

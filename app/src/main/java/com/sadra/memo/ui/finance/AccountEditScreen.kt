@@ -97,8 +97,16 @@ fun AccountEditScreen(accountId: Long, onClose: () -> Unit, onDeleted: () -> Uni
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 supportingText = { if (initial > 0) Text(formatMoney(initial)) }
             )
+            OutlinedTextField(
+                value = state.smsKey,
+                onValueChange = vm::onSmsKey,
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                label = { Text("کلید تشخیص پیامک (اختیاری)") },
+                singleLine = true,
+                supportingText = { Text("۴ رقم آخر کارت یا حساب، یا اسم فرستنده پیامک بانک. چندتا رو با کاما جدا کن.") }
+            )
             Text(
-                text = "شماره کارت و رمز لازم نیست و نباید اینجا وارد بشه.",
+                text = "فقط ۴ رقم آخر کافیه. شماره کامل کارت و رمز نباید اینجا وارد بشه.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp)

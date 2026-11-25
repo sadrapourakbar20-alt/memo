@@ -5,7 +5,9 @@ data class Account(
     val name: String,
     val type: Int = 0,
     val initialBalance: Long = 0,
-    val createdAt: Long
+    val createdAt: Long,
+    /** کلید تشخیص پیامک: ۴ رقم آخر کارت/حساب یا اسم فرستنده؛ چندتا رو با کاما جدا کن */
+    val smsKey: String = ""
 )
 
 /** type: ۰ خرج، ۱ واریز */
@@ -16,6 +18,19 @@ data class MoneyTx(
     val amount: Long,
     val title: String = "",
     val category: String = "سایر",
+    val dateMillis: Long,
+    val createdAt: Long,
+    val smsHash: String = ""
+)
+
+data class SmsInboxItem(
+    val id: Long = 0,
+    val hash: String,
+    val sender: String,
+    val body: String,
+    val type: Int,
+    val amount: Long,
+    val category: String,
     val dateMillis: Long,
     val createdAt: Long
 )

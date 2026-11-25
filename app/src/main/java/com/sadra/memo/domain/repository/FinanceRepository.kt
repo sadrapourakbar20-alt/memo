@@ -15,4 +15,5 @@ interface FinanceRepository {
     suspend fun getTransaction(id: Long): MoneyTx?
     suspend fun saveTransaction(tx: MoneyTx): Long
     suspend fun deleteTransaction(id: Long)
+    suspend fun hasSmsHash(hash: String): Boolean
 }

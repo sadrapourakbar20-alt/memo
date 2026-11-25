@@ -1,8 +1,10 @@
 package com.sadra.memo.ui.settings
 
+import android.Manifest
 import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
@@ -42,11 +44,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.biometric.BiometricManager
+import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sadra.memo.reminder.NotificationHelper
 import com.sadra.memo.MemoApplication
 import com.sadra.memo.data.preferences.ThemeMode
+import com.sadra.memo.domain.nlu.SmsParser
+import com.sadra.memo.util.formatMoney
 import com.sadra.memo.ui.factoryOf
 
 @Composable
@@ -68,6 +73,11 @@ fun SettingsScreen() {
     val mode by vm.themeMode.collectAsState()
     val hasPin by vm.hasPin.collectAsState()
     val biometricOn by vm.biometricEnabled.collectAsState()
+    val smsEnabled by vm.smsEnabled.collectAsState()
+    val smsRial by vm.smsRial.collectAsState()
+    val smsAuto by vm.smsAuto.collectAsState()
+    var smsTest by remember { mutableStateOf("") }
+    var smsTestResult by remember { mutableStateOf<String?>(null) }
     var soundTitle by remember { mutableStateOf<String?>(null) }
     val message by vm.message.collectAsState()
 
@@ -100,6 +110,13 @@ fun SettingsScreen() {
             NotificationHelper.setSound(context, picked)
             refreshSoundTitle()
         }
+    }
+
+    val smsPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) vm.setSmsEnabled(true)
+        else vm.showMessage("مجوز پیامک داده نشد. اگه اندروید «تنظیمات محدود» رو نشون داد، از اطلاعات برنامه > سه‌نقطه > Allow restricted settings رو بزن و دوباره امتحان کن.")
     }
 
     val canBiometric = BiometricManager.from(context)
@@ -225,6 +242,77 @@ fun SettingsScreen() {
 
         Card(modifier = Modifier.fillMaxWidth(), colors = cardColors) {
             Column(modifier = Modifier.padding(16.dp)) {
+                Text("ثبت خودکار از پیامک بانک", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "وقتی بانک پیامک برداشت یا واریز بفرسته، مبلغ و نوعش رو از متن پیامک درمیارم. همه‌چیز فقط روی خود گوشی پردازش می‌شه و جایی فرستاده نمی‌شه. پیامک‌هایی که تراکنش نیستن (مثل رمز یکبار مصرف) نادیده گرفته می‌شن.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("فعال کردن", modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = smsEnabled,
+                        onCheckedChange = { on ->
+                            if (!on) {
+                                vm.setSmsEnabled(false)
+                            } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) ==
+                                PackageManager.PERMISSION_GRANTED
+                            ) {
+                                vm.setSmsEnabled(true)
+                            } else {
+                                smsPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS)
+                            }
+                        }
+                    )
+                }
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("مبلغ پیامک‌ها به ریاله (بیشتر بانک‌ها)", modifier = Modifier.weight(1f))
+                    Switch(checked = smsRial, onCheckedChange = { vm.setSmsRial(it) })
+                }
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("اگه حساب مشخص بود، خودکار ثبت کن", modifier = Modifier.weight(1f))
+                    Switch(checked = smsAuto, onCheckedChange = { vm.setSmsAuto(it) })
+                }
+                Text(
+                    text = "برای اینکه حساب خودکار تشخیص داده بشه، تو صفحه هر حساب «کلید تشخیص پیامک» (۴ رقم آخر کارت یا اسم فرستنده) رو بذار. بدون اون، تراکنش میره تو «پیامک‌های منتظر تأیید» و حسابش رو خودت با یه ضربه انتخاب می‌کنی.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+                OutlinedTextField(
+                    value = smsTest,
+                    onValueChange = { smsTest = it; smsTestResult = null },
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                    label = { Text("تست: یه پیامک بانک رو اینجا بچسبون") },
+                    minLines = 2
+                )
+                OutlinedButton(
+                    onClick = {
+                        val r = SmsParser.parse(smsTest, smsRial)
+                        smsTestResult = if (r == null) "تراکنشی تشخیص داده نشد."
+                        else (if (r.type == 0) "برداشت " else "واریز ") + formatMoney(r.amount)
+                    },
+                    modifier = Modifier.padding(top = 6.dp)
+                ) { Text("بررسی") }
+                val testResult = smsTestResult
+                if (testResult != null) {
+                    Text(testResult, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(top = 6.dp))
+                }
+                Text(
+                    text = "نکته: تو اندروید ۱۳ به بالا، برای برنامه‌هایی که از بیرون پلی‌استور نصب شدن، اجازه پیامک ممکنه اول بسته باشه. اگه گزینه تأیید نداشت: تنظیمات گوشی > برنامه‌ها > Memo > سه‌نقطه بالا > Allow restricted settings.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth(), colors = cardColors) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 Text("پشتیبان‌گیری", style = MaterialTheme.typography.titleMedium)
                 Text(
                     text = "همه یادداشت‌ها، کارها، کلاس‌ها و تنظیمات ترم تو یک فایل ذخیره می‌شه. فایل رو جایی امن (مثلاً پیام‌های ذخیره‌شده تلگرام) نگه دار.",
@@ -248,7 +336,7 @@ fun SettingsScreen() {
         }
 
         Text(
-            text = "Memo نسخه ۰٫۴",
+            text = "Memo نسخه ۰٫۵",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

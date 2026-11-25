@@ -81,6 +81,7 @@ class BackupManager(
             accounts.put(
                 JSONObject().put("id", a.id).put("name", a.name).put("type", a.type)
                     .put("initialBalance", a.initialBalance).put("createdAt", a.createdAt)
+                    .put("smsKey", a.smsKey)
             )
         }
         root.put("accounts", accounts)
@@ -91,6 +92,7 @@ class BackupManager(
                 JSONObject().put("id", t.id).put("accountId", t.accountId).put("type", t.type)
                     .put("amount", t.amount).put("title", t.title).put("category", t.category)
                     .put("dateMillis", t.dateMillis).put("createdAt", t.createdAt)
+                    .put("smsHash", t.smsHash)
             )
         }
         root.put("transactions", txs)
@@ -184,7 +186,8 @@ class BackupManager(
             accounts.add(
                 AccountEntity(
                     id = o.getLong("id"), name = o.getString("name"), type = o.getInt("type"),
-                    initialBalance = o.getLong("initialBalance"), createdAt = o.getLong("createdAt")
+                    initialBalance = o.getLong("initialBalance"), createdAt = o.getLong("createdAt"),
+                    smsKey = o.optString("smsKey", "")
                 )
             )
         }
@@ -198,7 +201,7 @@ class BackupManager(
                     id = o.getLong("id"), accountId = o.getLong("accountId"), type = o.getInt("type"),
                     amount = o.getLong("amount"), title = o.getString("title"),
                     category = o.getString("category"), dateMillis = o.getLong("dateMillis"),
-                    createdAt = o.getLong("createdAt")
+                    createdAt = o.getLong("createdAt"), smsHash = o.optString("smsHash", "")
                 )
             )
         }

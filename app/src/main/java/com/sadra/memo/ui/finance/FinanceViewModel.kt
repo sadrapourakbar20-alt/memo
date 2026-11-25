@@ -2,6 +2,7 @@ package com.sadra.memo.ui.finance
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sadra.memo.data.repository.SmsInboxRepository
 import com.sadra.memo.domain.model.AccountSummary
 import com.sadra.memo.domain.model.MoneyTx
 import com.sadra.memo.domain.model.balanceOf
@@ -21,7 +22,8 @@ data class FinanceState(
     val recent: List<TxRowUi> = emptyList(),
     val total: Long = 0,
     val monthIncome: Long = 0,
-    val monthExpense: Long = 0
+    val monthExpense: Long = 0,
+    val pendingSms: Int = 0
 )
 
 fun currentMonthRange(): Pair<Long, Long> {
@@ -33,11 +35,12 @@ fun currentMonthRange(): Pair<Long, Long> {
     return start to end
 }
 
-class FinanceViewModel(repository: FinanceRepository) : ViewModel() {
+class FinanceViewModel(repository: FinanceRepository, inbox: SmsInboxRepository) : ViewModel() {
     val state: StateFlow<FinanceState> = combine(
         repository.observeAccounts(),
-        repository.observeTransactions()
-    ) { accounts, txs ->
+        repository.observeTransactions(),
+        inbox.observeAll()
+    ) { accounts, txs, pending ->
         val (start, end) = currentMonthRange()
         val summaries = accounts.map { AccountSummary(it, balanceOf(it, txs)) }
         val names = accounts.associate { it.id to it.name }
@@ -47,7 +50,8 @@ class FinanceViewModel(repository: FinanceRepository) : ViewModel() {
             recent = txs.take(15).map { TxRowUi(it, names[it.accountId] ?: "؟") },
             total = summaries.sumOf { it.balance },
             monthIncome = txs.filter { it.type == 1 && it.dateMillis in start until end }.sumOf { it.amount },
-            monthExpense = txs.filter { it.type == 0 && it.dateMillis in start until end }.sumOf { it.amount }
+            monthExpense = txs.filter { it.type == 0 && it.dateMillis in start until end }.sumOf { it.amount },
+            pendingSms = pending.size
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FinanceState())
 }

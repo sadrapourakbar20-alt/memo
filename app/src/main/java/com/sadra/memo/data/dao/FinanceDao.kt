@@ -43,6 +43,9 @@ interface FinanceDao {
     @Query("DELETE FROM transactions WHERE id = :id")
     suspend fun deleteTransaction(id: Long)
 
+    @Query("SELECT COUNT(*) FROM transactions WHERE smsHash = :hash")
+    suspend fun countByHash(hash: String): Int
+
     @Query("DELETE FROM accounts")
     suspend fun clearAccounts()
 

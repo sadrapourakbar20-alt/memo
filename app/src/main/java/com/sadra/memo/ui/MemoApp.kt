@@ -34,6 +34,7 @@ import com.sadra.memo.ui.assistant.AssistantScreen
 import com.sadra.memo.ui.finance.AccountDetailScreen
 import com.sadra.memo.ui.finance.AccountEditScreen
 import com.sadra.memo.ui.finance.FinanceScreen
+import com.sadra.memo.ui.finance.SmsInboxScreen
 import com.sadra.memo.ui.finance.TxEditScreen
 import com.sadra.memo.ui.home.HomeScreen
 import com.sadra.memo.ui.notes.ArchiveScreen
@@ -126,9 +127,11 @@ fun MemoApp() {
                     onAddAccount = { navController.navigate("account_edit/0") },
                     onOpenAccount = { id -> navController.navigate("account/$id") },
                     onAddTx = { type -> navController.navigate("tx_edit/0/$type") },
-                    onOpenTx = { id -> navController.navigate("tx_edit/$id/0") }
+                    onOpenTx = { id -> navController.navigate("tx_edit/$id/0") },
+                    onOpenInbox = { navController.navigate("sms_inbox") }
                 )
             }
+            composable("sms_inbox") { SmsInboxScreen(onBack = { navController.popBackStack() }) }
             composable("assistant") {
                 AssistantScreen(
                     onOpenNote = { id -> navController.navigate("note_edit/$id") },

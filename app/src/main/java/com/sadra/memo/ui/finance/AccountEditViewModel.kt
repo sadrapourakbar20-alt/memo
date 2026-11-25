@@ -13,6 +13,7 @@ data class AccountEditState(
     val name: String = "",
     val type: Int = 0,
     val initialText: String = "",
+    val smsKey: String = "",
     val error: String? = null,
     val loaded: Boolean = false
 )
@@ -33,7 +34,7 @@ class AccountEditViewModel(
                 val a = repository.getAccount(accountId)
                 original = a
                 _state.value = if (a != null) {
-                    AccountEditState(a.name, a.type, a.initialBalance.toString(), loaded = true)
+                    AccountEditState(a.name, a.type, a.initialBalance.toString(), a.smsKey, loaded = true)
                 } else AccountEditState(loaded = true)
             }
         }
@@ -41,6 +42,7 @@ class AccountEditViewModel(
 
     fun onName(v: String) { _state.value = _state.value.copy(name = v, error = null) }
     fun onType(v: Int) { _state.value = _state.value.copy(type = v) }
+    fun onSmsKey(v: String) { _state.value = _state.value.copy(smsKey = v.take(60)) }
     fun onInitial(v: String) {
         _state.value = _state.value.copy(initialText = TextNorm.digits(v).filter { it.isDigit() }.take(13))
     }
@@ -58,7 +60,8 @@ class AccountEditViewModel(
                     name = s.name.trim(),
                     type = s.type,
                     initialBalance = s.initialText.toLongOrNull() ?: 0L,
-                    createdAt = original?.createdAt ?: System.currentTimeMillis()
+                    createdAt = original?.createdAt ?: System.currentTimeMillis(),
+                    smsKey = s.smsKey.trim()
                 )
             )
             onDone()
