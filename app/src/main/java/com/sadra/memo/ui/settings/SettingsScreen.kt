@@ -36,6 +36,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -112,11 +114,17 @@ fun SettingsScreen() {
         }
     }
 
+    val scope = rememberCoroutineScope()
     val smsPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) vm.setSmsEnabled(true)
-        else vm.showMessage("مجوز پیامک داده نشد. اگه اندروید «تنظیمات محدود» رو نشون داد، از اطلاعات برنامه > سه‌نقطه > Allow restricted settings رو بزن و دوباره امتحان کن.")
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms ->
+        val receiveGranted = perms[Manifest.permission.RECEIVE_SMS] == true
+        if (receiveGranted) {
+            vm.setSmsEnabled(true)
+            scope.launch { app.container.smsProcessor.syncRecentFromDeviceInbox() }
+        } else {
+            vm.showMessage("مجوز پیامک داده نشد. اگه اندروید «تنظیمات محدود» رو نشون داد، از اطلاعات برنامه > سه‌نقطه > Allow restricted settings رو بزن و دوباره امتحان کن.")
+        }
     }
 
     val canBiometric = BiometricManager.from(context)
@@ -259,12 +267,15 @@ fun SettingsScreen() {
                         onCheckedChange = { on ->
                             if (!on) {
                                 vm.setSmsEnabled(false)
-                            } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) ==
-                                PackageManager.PERMISSION_GRANTED
-                            ) {
-                                vm.setSmsEnabled(true)
                             } else {
-                                smsPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS)
+                                val hasReceive = ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+                                val hasRead = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+                                if (hasReceive && hasRead) {
+                                    vm.setSmsEnabled(true)
+                                    scope.launch { app.container.smsProcessor.syncRecentFromDeviceInbox() }
+                                } else {
+                                    smsPermissionLauncher.launch(arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS))
+                                }
                             }
                         }
                     )
@@ -278,7 +289,7 @@ fun SettingsScreen() {
                     Switch(checked = smsAuto, onCheckedChange = { vm.setSmsAuto(it) })
                 }
                 Text(
-                    text = "برای اینکه حساب خودکار تشخیص داده بشه، تو صفحه هر حساب «کلید تشخیص پیامک» (۴ رقم آخر کارت یا اسم فرستنده) رو بذار. بدون اون، تراکنش میره تو «پیامک‌های منتظر تأیید» و حسابش رو خودت با یه ضربه انتخاب می‌کنی.",
+                    text = "برای اینکه حساب خودکار تشخیص داده بشه، تو صفحه هر حساب «سرشماره یا کلید تشخیص پیامک» (مثل B.Pasargad، Bank Mellat، 09999987641 یا ۴ رقم آخر کارت) رو بذار. همچنین با یک ضربه در «پیامک‌های منتظر تأیید» می‌تونی سرشماره رو به حساب وصل کنی.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 6.dp)
@@ -336,7 +347,7 @@ fun SettingsScreen() {
         }
 
         Text(
-            text = "Memo نسخه ۰٫۵",
+            text = "Memo نسخه ۰٫۶",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
