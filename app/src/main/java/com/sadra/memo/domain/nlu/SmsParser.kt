@@ -26,10 +26,10 @@ object SmsParser {
     private val banks = listOf(
         "ملی", "ملت", "صادرات", "سپه", "سامان", "پاسارگاد", "ملل", "کشاورزی", "رفاه", "تجارت", "آینده",
         "شهر", "پارسیان", "مسکن", "سینا", "دی", "اقتصاد نوین", "قوامین", "انصار", "گردشگری",
-        "کارآفرین", "ایران زمین", "توسعه", "بلو"
+        "کارآفرین", "ایران زمین", "توسعه"
     )
 
-    fun parse(body: String, rialDefault: Boolean = true, fallbackAccountName: String? = null): ParsedSms? {
+    fun parse(body: String, rialDefault: Boolean = true): ParsedSms? {
         var t = TextNorm.digits(body)
             .replace('ي', 'ی').replace('ك', 'ک').replace('\u200c', ' ').replace('\u00a0', ' ')
         if (otp.containsMatchIn(t) && !moneyWords.containsMatchIn(t)) return null
@@ -77,13 +77,8 @@ object SmsParser {
         val amount = if (rial) value / 10 else value
         if (amount < 100) return null
 
-        val bank = banks.firstOrNull { t.contains("بانک $it") || t.contains(it) }
-        val title = when {
-            bank == "بلو" -> "پیامک بلوبانک"
-            bank != null -> "پیامک بانک $bank"
-            !fallbackAccountName.isNullOrBlank() -> "پیامک $fallbackAccountName"
-            else -> "پیامک بانکی"
-        }
+        val bank = banks.firstOrNull { t.contains("بانک $it") }
+        val title = if (bank != null) "پیامک بانک $bank" else "پیامک بانکی"
         return ParsedSms(type, amount, title, AmountParser.guessCategory(t, type))
     }
 }

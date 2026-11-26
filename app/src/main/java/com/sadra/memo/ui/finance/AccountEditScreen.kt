@@ -101,9 +101,9 @@ fun AccountEditScreen(accountId: Long, onClose: () -> Unit, onDeleted: () -> Uni
                 value = state.smsKey,
                 onValueChange = vm::onSmsKey,
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                label = { Text("سرشماره یا کلید تشخیص پیامک (اختیاری)") },
+                label = { Text("کلید تشخیص پیامک (اختیاری)") },
                 singleLine = true,
-                supportingText = { Text("سرشماره یا اسم فرستنده (مثل B.Pasargad، Bank Mellat، 09999987641) یا ۴ رقم آخر کارت. چندتا رو با کاما جدا کن.") }
+                supportingText = { Text("۴ رقم آخر کارت یا حساب، یا اسم فرستنده پیامک بانک. چندتا رو با کاما جدا کن.") }
             )
             Text(
                 text = "فقط ۴ رقم آخر کافیه. شماره کامل کارت و رمز نباید اینجا وارد بشه.",
