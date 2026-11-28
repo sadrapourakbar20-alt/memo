@@ -42,7 +42,7 @@ class AccountEditViewModel(
 
     fun onName(v: String) { _state.value = _state.value.copy(name = v, error = null) }
     fun onType(v: Int) { _state.value = _state.value.copy(type = v) }
-    fun onSmsKey(v: String) { _state.value = _state.value.copy(smsKey = v.take(60)) }
+    fun onSmsKey(v: String) { _state.value = _state.value.copy(smsKey = v.take(160)) }
     fun onInitial(v: String) {
         _state.value = _state.value.copy(initialText = TextNorm.digits(v).filter { it.isDigit() }.take(13))
     }

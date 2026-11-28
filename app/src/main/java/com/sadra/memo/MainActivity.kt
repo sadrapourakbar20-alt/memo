@@ -29,11 +29,20 @@ import com.sadra.memo.data.preferences.ThemeMode
 import com.sadra.memo.ui.LockScreen
 import com.sadra.memo.ui.MemoApp
 import com.sadra.memo.ui.theme.MemoTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : FragmentActivity() {
 
     private var unlocked by mutableStateOf(false)
     private var pinEnabled = false
+
+    override fun onResume() {
+        super.onResume()
+        val app = application as MemoApplication
+        app.container.appScope.launch {
+            app.container.smsProcessor.syncRecentFromDeviceInbox()
+        }
+    }
 
     override fun onStop() {
         super.onStop()
